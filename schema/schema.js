@@ -1,33 +1,49 @@
 const graphql = require('graphql')
 const axios = require('axios')
-const { GraphQLObjectType, GraphQLString, GraphQLInt, GraphQLSchema } = graphql
+const {
+  GraphQLObjectType,
+  GraphQLString,
+  GraphQLInt,
+  GraphQLSchema,
+  GraphQLList
+} = graphql
+
+const jsonServerEndpoint = 'http://localhost:3000'
 
 const CompanyType = new GraphQLObjectType({
   name: 'Company',
-  fields: {
+  fields: () => ({
     id: { type: GraphQLString },
     name: { type: GraphQLString },
-    description: { type: GraphQLString }
-  }
+    description: { type: GraphQLString },
+    users: {
+      type: new GraphQLList(UserType),
+      resolve(parentValue, args) {
+        return axios
+          .get(
+            `${jsonServerEndpoint}/comapanies/${parentValue.companyId}/users`
+          )
+          .then(response => response.data)
+      }
+    }
+  })
 })
 
 const UserType = new GraphQLObjectType({
   name: 'User',
-  fields: {
+  fields: () => ({
     id: { type: GraphQLString },
     firstName: { type: GraphQLString },
     age: { type: GraphQLInt },
     company: {
       type: CompanyType,
       resolve(parentValue, args) {
-        console.log('parentValue', parentValue)
-        console.log('args', args)
         return axios
-          .get(`http://localhost:3000/companies/${parentValue.companyId}`)
+          .get(`${jsonServerEndpoint}/companies/${parentValue.companyId}`)
           .then(response => response.data)
       }
     }
-  }
+  })
 })
 
 const RootQuery = new GraphQLObjectType({
@@ -38,7 +54,16 @@ const RootQuery = new GraphQLObjectType({
       args: { id: { type: GraphQLString } },
       resolve(parentValue, args) {
         return axios
-          .get(`http://localhost:3000/users/${args.id}`)
+          .get(`${jsonServerEndpoint}/users/${args.id}`)
+          .then(response => response.data)
+      }
+    },
+    company: {
+      type: CompanyType,
+      args: { id: { type: GraphQLString } },
+      resolve(parentValue, args) {
+        return axios
+          .get(`${jsonServerEndpoint}/companies/${args.id}`)
           .then(response => response.data)
       }
     }
